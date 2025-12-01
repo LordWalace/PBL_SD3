@@ -1,24 +1,41 @@
-// Finalizado
-#include <ncurses.h>
+//Ta com uns erros bestas na interface caso tenha tempo arruma depois. 
+
+#define _DEFAULT_SOURCE 
+
+#include "LibCoprocessador.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include "LibCoprocessador.h"
+#include <fcntl.h>
+#include <termios.h>
+#include <linux/input.h>
+#include <math.h>
+#include <sys/select.h> 
 
-// stb_image
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize2.h"
-
-#define IMG_PATH "./imagens/"
+// --- Definições ---
+#define MAX_IMAGES 10
 #define MAX_FILENAME 100
-#define MAX_IMAGES 50
+#define MOUSE_DEV "/dev/input/mice"
 
-// Estrutura do cabeçalho BMP
+#ifndef IMG_WIDTH
+#define IMG_WIDTH 320
+#endif
+#ifndef IMG_HEIGHT
+#define IMG_HEIGHT 240
+#endif
+
+// Cor do Cursor: 0x00 = PRETO (Contraste máximo)
+#define CURSOR_COLOR 0x00
+#define CURSOR_SIZE 6 
+
+// --- Estruturas ---
+typedef struct {
+    int x, y;
+    int left_btn, right_btn;
+} MouseState;
+
 #pragma pack(push, 1)
 typedef struct {
     uint16_t type;
@@ -27,6 +44,7 @@ typedef struct {
     uint16_t reserved2;
     uint32_t offset;
 } BMPHeader;
+
 typedef struct {
     uint32_t size;
     int32_t  width;
@@ -42,323 +60,430 @@ typedef struct {
 } BMPInfoHeader;
 #pragma pack(pop)
 
-// Zoom janela
-typedef struct {
-    int x1, y1, x2, y2;
-    int definida;
-} JanelaZoom;
+// --- Funções de Sistema ---
 
-uint8_t image_data[IMG_WIDTH * IMG_HEIGHT];
-JanelaZoom janela = {0, 0, 0, 0, 0};
-char imagens_bmp[MAX_IMAGES][MAX_FILENAME];
-int num_imagens = 0;
-char current_image[MAX_FILENAME] = "";
+void clear_screen() {
+    printf("\033[2J\033[H");
+}
 
-int sistema_inicializado = 0;
-int imagem_carregada = 0;
-int modo_janela = 0; // 0 = imagem inteira, 1 = janela
+void set_conio_terminal_mode() {
+    struct termios new_termios;
+    tcgetattr(0, &new_termios);
+    new_termios.c_lflag &= ~ICANON;
+    new_termios.c_lflag &= ~ECHO;
+    new_termios.c_cc[VMIN] = 1;
+    new_termios.c_cc[VTIME] = 0;
+    tcsetattr(0, TCSANOW, &new_termios);
+}
+
+void set_nonblocking_mode() {
+    struct termios new_termios;
+    tcgetattr(0, &new_termios);
+    new_termios.c_lflag &= ~ICANON;
+    new_termios.c_lflag &= ~ECHO;
+    new_termios.c_cc[VMIN] = 0;
+    new_termios.c_cc[VTIME] = 0;
+    tcsetattr(0, TCSANOW, &new_termios);
+}
+
+void reset_terminal_mode() {
+    struct termios new_termios;
+    tcgetattr(0, &new_termios);
+    new_termios.c_lflag |= ICANON;
+    new_termios.c_lflag |= ECHO;
+    tcsetattr(0, TCSANOW, &new_termios);
+}
+
+int getch() {
+    int r;
+    unsigned char c;
+    if ((r = read(0, &c, sizeof(c))) < 0) return r;
+    else return c;
+}
+
+int kbhit() {
+    struct timeval tv = { 0L, 0L };
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(0, &fds);
+    return select(1, &fds, NULL, NULL, &tv) > 0;
+}
+
+int get_menu_choice() {
+    set_conio_terminal_mode();
+    char c = getch();
+    reset_terminal_mode();
+    return c - '0';
+}
+
+// --- Mouse ---
+
+int init_mouse(int *fd) {
+    *fd = open(MOUSE_DEV, O_RDONLY | O_NONBLOCK);
+    if (*fd == -1) {
+        printf("❌ Erro ao abrir mouse (%s). Use SUDO.\n", MOUSE_DEV);
+        return -1;
+    }
+    return 0;
+}
+
+void update_mouse(int fd, MouseState *ms) {
+    unsigned char data[3];
+    int bytes = read(fd, data, sizeof(data));
+    
+    if (bytes > 0) {
+        int dx = (signed char)data[1];
+        int dy = (signed char)data[2]; 
+        
+        ms->left_btn = data[0] & 0x1;
+        ms->right_btn = data[0] & 0x2;
+        
+        ms->x += dx;
+        ms->y -= dy; 
+        
+        if (ms->x < 0) ms->x = 0;
+        if (ms->x >= IMG_WIDTH) ms->x = IMG_WIDTH - 1;
+        if (ms->y < 0) ms->y = 0;
+        if (ms->y >= IMG_HEIGHT) ms->y = IMG_HEIGHT - 1;
+    }
+}
+
+// --- Gráficos ---
 
 uint8_t rgb_to_gray(uint8_t r, uint8_t g, uint8_t b) {
-    return (uint8_t)((299*r + 587*g + 114*b)/1000);
+    return (uint8_t)((299 * r + 587 * g + 114 * b) / 1000);
 }
 
-// Salva BMP 8-bit grayscale usando cabeçalho
-int salvar_bmp_gray(const char* out_bmp, uint8_t* data, int width, int height) {
-    FILE* f = fopen(out_bmp, "wb");
-    if (!f) return -1;
-    BMPHeader head;
-    BMPInfoHeader info;
-    head.type = 0x4D42; //"BM"
-    head.size = 54 + 1024 + width*height;
-    head.reserved1 = 0;
-    head.reserved2 = 0;
-    head.offset = 54 + 1024;
-    info.size = 40;
-    info.width = width;
-    info.height = height;
-    info.planes = 1;
-    info.bits = 8;
-    info.compression = 0;
-    info.imagesize = width*height;
-    info.xresolution = 2835;
-    info.yresolution = 2835;
-    info.ncolours = 256;
-    info.importantcolours = 256;
-    fwrite(&head, sizeof(head), 1, f);
-    fwrite(&info, sizeof(info), 1, f);
-
-    // Paleta 8-bit gray
-    unsigned char pal[1024];
-    for(int i=0; i<256; i++) {
-        pal[i*4]=pal[i*4+1]=pal[i*4+2]=i; pal[i*4+3]=0;
-    }
-    fwrite(pal,1,1024,f);
-
-    for(int y=height-1;y>=0;y--) // BMP bottom-up
-        fwrite(&data[y*width], 1, width, f);
-    fclose(f);
-    return 0;
-}
-
-// Converte JPG/PNG para BMP 320x240 grayscale usando stb_image
-int convert_to_bmp_320x240_gray(const char* input_path, const char* output_bmp) {
-    int w,h,comp;
-    unsigned char* img = stbi_load(input_path, &w, &h, &comp, 3);
-    if(!img) return -1;
-    unsigned char* resized = malloc(320*240*3);
-    stbir_resize_uint8(img, w, h, 0, resized, 320, 240, 0, 3);
-    uint8_t* gray = malloc(320*240);
-    for(int i=0;i<320*240;i++) {
-        uint8_t r = resized[i*3+0], g = resized[i*3+1], b = resized[i*3+2];
-        gray[i] = rgb_to_gray(r,g,b);
-    }
-    free(resized); stbi_image_free(img);
-    int ok = salvar_bmp_gray(output_bmp, gray, 320, 240);
-    free(gray);
-    return ok;
-}
-
-// Lista BMPs válidos na pasta
-void listar_bmps() {
-    DIR *d; struct dirent *dir;
-    num_imagens = 0;
-    d = opendir(IMG_PATH);
-    if (d) {
-        while ((dir = readdir(d)) != NULL) {
-            size_t len=strlen(dir->d_name);
-            if (len>4 && strcasecmp(dir->d_name+len-4,".bmp")==0) {
-                char fullpath[MAX_FILENAME*2];
-                snprintf(fullpath,sizeof(fullpath),"%s%s",IMG_PATH,dir->d_name);
-                FILE* f = fopen(fullpath,"rb");
-                if(f) {
-                    BMPHeader head; fread(&head,sizeof(head),1,f);
-                    if(head.type==0x4D42) {
-                        strncpy(imagens_bmp[num_imagens],dir->d_name,MAX_FILENAME-1);
-                        imagens_bmp[num_imagens][MAX_FILENAME-1]=0;
-                        num_imagens++; if(num_imagens>=MAX_IMAGES) break;
-                    }
-                    fclose(f);
-                }
-            }
-        }
-        closedir(d);
-    }
-}
-
-// Carrega BMP da pasta usando cabeçalho
-int load_bmp(const char* filename, uint8_t* image_data) {
-    FILE *file; BMPHeader head; BMPInfoHeader info;
+int load_bmp(const char *filename, uint8_t *image_data) {
+    FILE *file;
+    BMPHeader header;
+    BMPInfoHeader infoHeader;
+    
     file = fopen(filename, "rb");
-    if (!file) return -1;
-    fread(&head, sizeof(BMPHeader), 1, file);
-    if(head.type != 0x4D42) { fclose(file); return -2; }
-    fread(&info, sizeof(BMPInfoHeader), 1, file);
-    if (info.width != IMG_WIDTH || abs(info.height) != IMG_HEIGHT) {
-        fclose(file); return -3;
+    if (!file) { printf("❌ Erro: %s\n", filename); return -1; }
+    
+    fread(&header, sizeof(BMPHeader), 1, file);
+    if (header.type != 0x4D42) { fclose(file); return -1; }
+    fread(&infoHeader, sizeof(BMPInfoHeader), 1, file);
+    
+    int height = abs(infoHeader.height);
+    if (infoHeader.width != IMG_WIDTH || height != IMG_HEIGHT) {
+        printf("❌ Dimensão incorreta: %dx%d\n", infoHeader.width, height);
+        fclose(file); return -1;
     }
-    fseek(file, head.offset, SEEK_SET);
-    int bytes_per_pixel = info.bits / 8;
-    int row_size = ((info.width * bytes_per_pixel + 3) / 4) * 4;
-    uint8_t *row_data = (uint8_t*)malloc(row_size);
+    
+    fseek(file, header.offset, SEEK_SET);
+    
+    int bytes_per_pixel = infoHeader.bits / 8;
+    int line_width_bytes = infoHeader.width * bytes_per_pixel;
+    int padding = (4 - (line_width_bytes % 4)) % 4;
+    
+    uint8_t *row_buffer = (uint8_t*)malloc(line_width_bytes);
+    if (!row_buffer) { fclose(file); return -1; }
+    
+    printf("Carregando");
     for (int y = 0; y < IMG_HEIGHT; y++) {
-        fread(row_data, 1, row_size, file);
+        fread(row_buffer, 1, line_width_bytes, file);
         for (int x = 0; x < IMG_WIDTH; x++) {
             uint8_t gray;
-            if (info.bits == 32) {
-                uint8_t b = row_data[x*4+0];
-                uint8_t g = row_data[x*4+1];
-                uint8_t r = row_data[x*4+2];
-                gray = rgb_to_gray(r,g,b);
-            } else if (info.bits == 24) {
-                uint8_t b = row_data[x*3+0];
-                uint8_t g = row_data[x*3+1];
-                uint8_t r = row_data[x*3+2];
-                gray = rgb_to_gray(r,g,b);
-            } else if (info.bits == 8) {
-                gray = row_data[x];
-            } else {
-                free(row_data); fclose(file); return -4;
-            }
-            int addr = (IMG_HEIGHT-1-y)*IMG_WIDTH + x;
-            image_data[addr] = gray;
+            int idx = x * bytes_per_pixel;
+            if (infoHeader.bits == 32) gray = rgb_to_gray(row_buffer[idx+2], row_buffer[idx+1], row_buffer[idx+0]);
+            else if (infoHeader.bits == 24) gray = rgb_to_gray(row_buffer[idx+2], row_buffer[idx+1], row_buffer[idx+0]);
+            else if (infoHeader.bits == 8) gray = row_buffer[x];
+            else { free(row_buffer); fclose(file); return -1; }
+            
+            int final_addr = (IMG_HEIGHT - 1 - y) * IMG_WIDTH + x;
+            image_data[final_addr] = gray;
         }
+        if (padding > 0) fseek(file, padding, SEEK_CUR);
+        if (y % 60 == 0) { printf("."); fflush(stdout); }
     }
-    free(row_data); fclose(file);
+    free(row_buffer);
+    printf(" OK!\n");
+    fclose(file);
     return 0;
 }
 
-int envia_fpga() {
+int send_to_fpga(uint8_t *image_data) {
+    printf("Enviando para FPGA");
     for (int i = 0; i < IMG_WIDTH * IMG_HEIGHT; i++) {
-        if (write_pixel(i, image_data[i]) < 0) return -1;
+        write_pixel(i, image_data[i]);
+        if (i % ((IMG_WIDTH * IMG_HEIGHT) / 10) == 0) { printf("."); fflush(stdout); }
     }
+    printf(" OK!\n");
     send_refresh();
-    usleep(110000);
+    usleep(100000);
     return 0;
 }
 
-void zoom_in() {
-    Vizinho_Prox();
-    while(!Flag_Done()) usleep(1000);
-    send_refresh();
-    mvprintw(25, 0, "Zoom IN aplicado.");
-}
+// --- FUNÇÕES DE CURSOR SOFTWARE ---
 
-void zoom_out() {
-    Decimacao();
-    while(!Flag_Done()) usleep(1000);
-    send_refresh();
-    mvprintw(25, 0, "Zoom OUT aplicado.");
-}
-
-void desenha_interface() {
-    clear();
-    mvprintw(0,0,"");
-    mvprintw(1,0,"      SISTEMA DE ZOOM - COPROCESSADOR FPGA - MI Sistemas Digitais      ");
-    mvprintw(2,0,"");
-    mvprintw(4,0,"[I] Escolher imagem  [A] Adicionar nova imagem  [Q] Sair");
-    mvprintw(5,0,"[+] Zoom in  [-] Zoom out  [W] Modo imagem/janela  [R] Reset");
-    mvprintw(6,0,"Clique ESQ/Dir define janela de zoom.  ");
-    mvprintw(8,0,"Imagem: %s", imagem_carregada ? current_image : "[Nenhuma]");
-    mvprintw(9,0,"Modo: %s", modo_janela ? "JANELA" : "IMAGEM COMPLETA");
-    if(janela.definida) mvprintw(10,0,"Janela: (%d,%d) a (%d,%d)", janela.x1,janela.y1,janela.x2,janela.y2);
-    else mvprintw(10,0,"Janela: [Não definida]");
-    mvprintw(12,0,"─────────────────────────────────────────────────────────────");
-}
-
-// Menu para escolher imagem por número
-void menu_escolher_imagem() {
-    listar_bmps();
-    int sel = 0;
-    while(1) {
-        clear();
-        mvprintw(2,0,"ESCOLHA UMA IMAGEM BMP:");
-        for(int i=0;i<num_imagens;i++)
-            mvprintw(4+i,0,"[%d] %s %s", i+1, imagens_bmp[i], (strcmp(current_image,imagens_bmp[i])==0?"(Atual)":""));
-        mvprintw(6+num_imagens,0,"[0] Cancelar");
-        mvprintw(7+num_imagens,0,"Número: ");
-        refresh(); echo(); curs_set(1);
-        char buf[10]={0}; getnstr(buf,9);
-        noecho(); curs_set(0); sel=atoi(buf);
-        if(sel==0) break;
-        if(sel>0 && sel<=num_imagens) {
-            char fullpath[MAX_FILENAME*2];
-            snprintf(fullpath,sizeof(fullpath),"%s%s",IMG_PATH,imagens_bmp[sel-1]);
-            int ret=load_bmp(fullpath,image_data);
-            if(ret==0 && envia_fpga()==0){
-                strcpy(current_image,imagens_bmp[sel-1]);
-                imagem_carregada=1;
-                desenha_interface();
-                mvprintw(20,0,"✓ '%s' carregada com sucesso.",imagens_bmp[sel-1]);
-                getch(); break;
-            }else{
-                desenha_interface();
-                mvprintw(20,0,"Erro ao carregar/enviar '%s'!",imagens_bmp[sel-1]);
-                getch(); break;
+void draw_software_cursor(int x, int y, uint8_t *current_view, int mode) {
+    for (int dy = 0; dy < CURSOR_SIZE; dy++) {
+        for (int dx = 0; dx < CURSOR_SIZE; dx++) {
+            int px = x + dx;
+            int py = y + dy;
+            if (px >= 0 && px < IMG_WIDTH && py >= 0 && py < IMG_HEIGHT) {
+                int addr = py * IMG_WIDTH + px;
+                if (mode == 1) write_pixel(addr, CURSOR_COLOR);
+                else write_pixel(addr, current_view[addr]);
             }
-        } else {
-            mvprintw(10+num_imagens,0,"Opção inválida!");
-            getch();
         }
     }
 }
 
-// Menu para adicionar nova imagem (converter JPG/PNG)
-void menu_adicionar_nova_imagem() {
-    listar_bmps();
-    DIR *d = opendir(IMG_PATH);
-    struct dirent *dir;
-    char novas[MAX_IMAGES][MAX_FILENAME];
-    int qnt_novas=0;
-    if(d){
-        while((dir=readdir(d))!=NULL){
-            size_t len=strlen(dir->d_name);
-            if(len>4 &&
-               (strcasecmp(dir->d_name+len-4,".jpg")==0 ||
-                strcasecmp(dir->d_name+len-4,".png")==0)){
-                char bmp_equiv[MAX_FILENAME];
-                strncpy(bmp_equiv,dir->d_name,len-4);
-                bmp_equiv[len-4]=0;
-                strcat(bmp_equiv,".bmp");
-                int found=0;
-                for(int i=0;i<num_imagens;i++)
-                    if(strcasecmp(imagens_bmp[i],bmp_equiv)==0) found=1;
-                if(!found){
-                    strncpy(novas[qnt_novas],dir->d_name,MAX_FILENAME-1);
-                    novas[qnt_novas][MAX_FILENAME-1]=0;
-                    qnt_novas++; if(qnt_novas>=MAX_IMAGES) break;
+// --- Zoom de Janela (Atualiza buffer de fundo) ---
+void draw_zoomed_region(uint8_t *current_view, uint8_t *original_data, int x1, int y1, int x2, int y2, int zoom_factor, int algorithm) {
+    int x_start = (x1 < x2) ? x1 : x2;
+    int x_end = (x1 < x2) ? x2 : x1;
+    int y_start = (y1 < y2) ? y1 : y2;
+    int y_end = (y1 < y2) ? y2 : y1;
+    
+    int width = x_end - x_start;
+    int height = y_end - y_start;
+    
+    if (width <= 1 || height <= 1) return;
+
+    if (zoom_factor == 1) {
+        for (int y = y_start; y <= y_end; y++) {
+            for (int x = x_start; x <= x_end; x++) {
+                if (x >= 0 && x < IMG_WIDTH && y >= 0 && y < IMG_HEIGHT) {
+                    int addr = y * IMG_WIDTH + x;
+                    uint8_t val = original_data[addr];
+                    write_pixel(addr, val);
+                    current_view[addr] = val;
                 }
             }
-        } closedir(d);
+        }
+        return; 
     }
-    if(qnt_novas==0){
-        mvprintw(5,0,"Não há novas imagens JPG/PNG não convertidas na pasta.");
-        mvprintw(6,0,"Pressione qualquer tecla..."); getch(); return;
+
+    int src_width = width / zoom_factor;
+    int src_height = height / zoom_factor;
+    int src_x_start = x_start + (width - src_width) / 2;
+    int src_y_start = y_start + (height - src_height) / 2;
+
+    for (int dy = 0; dy < height; dy++) {
+        for (int dx = 0; dx < width; dx++) {
+            int out_x = x_start + dx;
+            int out_y = y_start + dy;
+
+            if (out_x >= 0 && out_x < IMG_WIDTH && out_y >= 0 && out_y < IMG_HEIGHT) {
+                int addr = out_y * IMG_WIDTH + out_x;
+                
+                if (dx == 0 || dx == width - 1 || dy == 0 || dy == height - 1) {
+                    write_pixel(addr, 255); // Borda Branca
+                    current_view[addr] = 255;
+                    continue;
+                }
+
+                int sx = src_x_start + (dx / zoom_factor);
+                int sy = src_y_start + (dy / zoom_factor);
+                
+                uint8_t pixel_val = 0;
+                if (sx >= 0 && sx < IMG_WIDTH && sy >= 0 && sy < IMG_HEIGHT) {
+                    if (algorithm == 1) {
+                        // Vizinho_Prox
+                        pixel_val = original_data[sy * IMG_WIDTH + sx]; 
+                    } else {
+                        // Replicacao (Pixel Replication Simples)
+                        pixel_val = original_data[sy * IMG_WIDTH + sx];
+                    }
+                }
+                write_pixel(addr, pixel_val);
+                current_view[addr] = pixel_val;
+            }
+        }
     }
-    mvprintw(2,0,"NOVAS IMAGENS ENCONTRADAS PARA CONVERTER:");
-    for(int i=0;i<qnt_novas;i++)
-        mvprintw(4+i,0,"[%d] %s",i+1,novas[i]);
-    mvprintw(6+qnt_novas,0,"[0] Cancelar");
-    mvprintw(7+qnt_novas,0,"Escolha: "); refresh(); echo(); curs_set(1);
-    char buf[10]; getnstr(buf,9); noecho(); curs_set(0);
-    int sel=atoi(buf);
-    if(sel<1||sel>qnt_novas) return;
-    char bmp_final[MAX_FILENAME*2], input_path[MAX_FILENAME*2], output_path[MAX_FILENAME*2];
-    strncpy(bmp_final,novas[sel-1],MAX_FILENAME-1); bmp_final[MAX_FILENAME-1]=0;
-    size_t l=strlen(bmp_final); bmp_final[l-3]='b'; bmp_final[l-2]='m'; bmp_final[l-1]='p'; bmp_final[l]='\0';
-    snprintf(input_path,sizeof(input_path),"%s%s",IMG_PATH,novas[sel-1]);
-    snprintf(output_path,sizeof(output_path),"%s%s",IMG_PATH,bmp_final);
-    int ret=convert_to_bmp_320x240_gray(input_path,output_path);
-    if(ret==0){
-        mvprintw(15,0,"Imagem '%s' convertida e salva como '%s'.",novas[sel-1],bmp_final);
-    }else{
-        mvprintw(15,0,"Erro ao converter '%s'. Formato não suportado?",novas[sel-1]);
+}
+
+// --- MODO INTERATIVO ---
+void interactive_window_zoom(uint8_t *original_image_data) {
+    uint8_t *current_view = (uint8_t*)malloc(IMG_WIDTH * IMG_HEIGHT);
+    if (!current_view) return;
+    
+    memcpy(current_view, original_image_data, IMG_WIDTH * IMG_HEIGHT);
+
+    clear_screen();
+    printf("╔════════════════════════════════════════════╗\n");
+    printf("║      MODO JANELA - ESCOLHA O ALGORITMO     ║\n");
+    printf("╚════════════════════════════════════════════╝\n");
+    printf("  [1] Vizinho_Prox\n");
+    printf("  [2] Replicacao\n\nEscolha: ");
+    
+    int algorithm = get_menu_choice();
+    printf("%d\n", algorithm);
+    if (algorithm != 1 && algorithm != 2) algorithm = 1;
+
+    int mouse_fd;
+    if (init_mouse(&mouse_fd) != 0) { free(current_view); return; }
+    
+    set_nonblocking_mode();
+    
+    MouseState ms = {IMG_WIDTH/2, IMG_HEIGHT/2, 0, 0};
+    int old_x = ms.x, old_y = ms.y;
+    int state = 0; 
+    int p1_x = 0, p1_y = 0, p2_x = 0, p2_y = 0;
+    int zoom_level = 1;
+    int running = 1;
+    int btn_released = 1;
+
+    clear_screen();
+    printf("=== MODO JANELA (%s) ===\n", (algorithm==1) ? "Vizinho_Prox" : "Replicacao");
+    printf("1. Selecione Ponto 1.\n");
+    printf("2. Selecione Ponto 2.\n");
+    printf("3. Use +/- para Zoom.\n");
+
+    // Desenha cursor inicial
+    draw_software_cursor(ms.x, ms.y, current_view, 1);
+    send_refresh();
+
+    while (running) {
+        // Apaga cursor antigo
+        draw_software_cursor(old_x, old_y, current_view, 0);
+        // Atualiza Posição
+        update_mouse(mouse_fd, &ms);
+        // Desenha novo cursor
+        draw_software_cursor(ms.x, ms.y, current_view, 1);
+        // Atualiza Tela
+        send_refresh();
+
+        old_x = ms.x;
+        old_y = ms.y;
+        
+        // --- INTERFACE DE TEXTO SOLICITADA ---
+        printf("\r\033[K"); // Limpa a linha atual
+        if (state == 0) {
+            printf("Mouse: (%03d, %03d) | Clique para definir Ponto 1", ms.x, ms.y);
+        } else if (state == 1) {
+            printf("Ponto 1: (%03d, %03d) | Mouse: (%03d, %03d) | Clique para definir Ponto 2", p1_x, p1_y, ms.x, ms.y);
+        } else if (state == 2) {
+            printf("Ponto 1: (%03d, %03d) | Ponto 2: (%03d, %03d) | Zoom: %dx | Digite + ou -", p1_x, p1_y, p2_x, p2_y, zoom_level);
+        }
+        fflush(stdout);
+
+        if (ms.left_btn && btn_released) {
+            btn_released = 0;
+            // Apaga cursor para não desenhar na imagem
+            draw_software_cursor(ms.x, ms.y, current_view, 0);
+
+            if (state == 0) {
+                p1_x = ms.x; p1_y = ms.y; 
+                state = 1;
+            } else if (state == 1) {
+                p2_x = ms.x; p2_y = ms.y; 
+                state = 2; zoom_level = 1;
+                draw_zoomed_region(current_view, original_image_data, p1_x, p1_y, p2_x, p2_y, 1, algorithm);
+            } else if (state == 2) {
+                draw_zoomed_region(current_view, original_image_data, p1_x, p1_y, p2_x, p2_y, 1, algorithm); // Reseta região
+                state = 0;
+            }
+            draw_software_cursor(ms.x, ms.y, current_view, 1); // Redesenha
+        }
+        if (!ms.left_btn) btn_released = 1;
+
+        if (kbhit()) {
+            char key = getch();
+            if (key == 27) running = 0; 
+            else if (state == 2) {
+                int old_zoom = zoom_level;
+                if (key == '+' || key == '=') { if (zoom_level < 8) zoom_level *= 2; } 
+                else if (key == '-' || key == '_') { if (zoom_level > 1) zoom_level /= 2; }
+                
+                if (old_zoom != zoom_level) {
+                    draw_software_cursor(ms.x, ms.y, current_view, 0);
+                    draw_zoomed_region(current_view, original_image_data, p1_x, p1_y, p2_x, p2_y, zoom_level, algorithm);
+                    draw_software_cursor(ms.x, ms.y, current_view, 1);
+                    send_refresh();
+                }
+            }
+        }
+        usleep(15000); 
     }
-    listar_bmps(); getch();
+    
+    send_to_fpga(original_image_data);
+    free(current_view);
+    reset_terminal_mode();
+    close(mouse_fd);
+}
+
+// --- Menus ---
+
+void print_main_menu() {
+    clear_screen();
+    printf("╔════════════════════════════════════════════╗\n");
+    printf("║   SISTEMA DE ZOOM - COPROCESSADOR FPGA    ║\n");
+    printf("╚════════════════════════════════════════════╝\n\n");
+    printf("  [1] Carregar Imagem\n");
+    printf("  [2] Zoom Janela (Mouse/Software)\n");
+    printf("  [3] Reset\n");
+    printf("  [4] Status\n");
+    printf("  [0] Sair\n\n");
+    printf("Escolha: ");
+}
+
+int select_image_menu(char *filename) {
+    char images[MAX_IMAGES][MAX_FILENAME] = {
+        "Xadrez.bmp", "Hornet.bmp", "imagem2.bmp", "imagem3.bmp"
+    };
+    clear_screen();
+    printf("Selecione:\n");
+    for(int i=0; i<4; i++) printf("  [%d] %s\n", i+1, images[i]);
+    printf("  [0] Voltar\n\n> ");
+    int c = get_menu_choice();
+    printf("%d\n", c);
+    if(c < 1 || c > 4) return -1;
+    strcpy(filename, images[c-1]);
+    return 0;
+}
+
+void show_status() {
+    clear_screen();
+    printf("STATUS HARDWARE: Done=%d | Err=%d | Max=%d | Min=%d\n", 
+            Flag_Done(), Flag_Error(), Flag_Max(), Flag_Min());
+    printf("\nPressione qualquer tecla para voltar...");
+    set_conio_terminal_mode(); getch(); reset_terminal_mode();
 }
 
 int main() {
-    int ch; MEVENT event;
-    initscr();
-    cbreak();
-    noecho();
-    keypad(stdscr, TRUE);
-    nodelay(stdscr, TRUE);
-    mousemask(BUTTON1_CLICKED | BUTTON3_CLICKED, NULL);
-    curs_set(0);
-    Lib(); Reset(); sistema_inicializado=1;
-    desenha_interface();
-    while(1){
-        ch=getch();
-        if(ch==KEY_MOUSE){
-            if(getmouse(&event)==OK){
-                if(event.bstate & BUTTON1_CLICKED){
-                    janela.x1=event.x; janela.y1=event.y; janela.definida=(janela.x2!=0||janela.y2!=0);
+    uint8_t *image_data = (uint8_t*)malloc(IMG_WIDTH * IMG_HEIGHT);
+    if (!image_data) { printf("Erro fatal de memoria\n"); return 1; }
+    
+    int system_initialized = 0;
+    int image_loaded = 0;
+
+    while (1) {
+        print_main_menu();
+        int choice = get_menu_choice();
+        printf("%d\n", choice);
+
+        switch (choice) {
+            case 1: {
+                char fname[MAX_FILENAME];
+                if (select_image_menu(fname) == 0) {
+                    if (!system_initialized) { Lib(); Reset(); system_initialized=1; }
+                    if (load_bmp(fname, image_data) == 0) {
+                        if (send_to_fpga(image_data) == 0) {
+                            image_loaded = 1;
+                            printf("\nImagem carregada!");
+                            sleep(1);
+                        }
+                    }
                 }
-                if(event.bstate & BUTTON3_CLICKED){
-                    janela.x2=event.x; janela.y2=event.y; janela.definida=(janela.x1!=0||janela.y1!=0);
-                }
-                desenha_interface();
+                break;
             }
-        } else if(ch=='i'||ch=='I') {
-            menu_escolher_imagem(); desenha_interface();
-        } else if(ch=='a'||ch=='A') {
-            menu_adicionar_nova_imagem(); desenha_interface();
-        } else if(ch=='+'||ch=='=') {
-            if(imagem_carregada) zoom_in();
-        } else if(ch=='-'||ch=='_') {
-            if(imagem_carregada) zoom_out();
-        } else if(ch=='w'||ch=='W') {
-            modo_janela=!modo_janela; desenha_interface();
-        } else if(ch=='r'||ch=='R') {
-            Reset(); usleep(120000); imagem_carregada=0;
-            janela.definida=0; janela.x1=janela.y1=janela.x2=janela.y2=0;
-            current_image[0]='\0'; desenha_interface();
-        } else if(ch=='q'||ch=='Q') {
-            break;
+            case 2:
+                if (image_loaded) interactive_window_zoom(image_data);
+                else { printf("\nCarregue imagem antes!"); sleep(1); }
+                break;
+            case 3:
+                Reset(); image_loaded = 0; printf("\nResetado!"); sleep(1); break;
+            case 4:
+                show_status(); break;
+            case 0:
+                free(image_data); printf("Saindo...\n"); return 0;
+            default:
+                printf("\nOpção inválida"); sleep(1);
         }
-        refresh(); usleep(35000);
     }
-    if(sistema_inicializado) encerrarLib();
-    endwin();
-    return 0;
 }

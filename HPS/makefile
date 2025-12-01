@@ -1,4 +1,5 @@
 # Makefile para compilação nativa no DE1-SoC
+# (Baseado no seu ficheiro)
 
 # Alvo de ajuda
 help:
