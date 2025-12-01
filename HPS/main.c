@@ -217,6 +217,7 @@ int send_to_fpga(uint8_t *image_data) {
 }
 
 // --- FUNÇÕES DE CURSOR SOFTWARE ---
+// A imagem fica sendo atualizada para mostrar o cursor
 
 void draw_software_cursor(int x, int y, uint8_t *current_view, int mode) {
     for (int dy = 0; dy < CURSOR_SIZE; dy++) {
@@ -286,7 +287,7 @@ void draw_zoomed_region(uint8_t *current_view, uint8_t *original_data, int x1, i
                         // Vizinho_Prox
                         pixel_val = original_data[sy * IMG_WIDTH + sx]; 
                     } else {
-                        // Replicacao (Pixel Replication Simples)
+                        // Replicacao (Pixel Replication)
                         pixel_val = original_data[sy * IMG_WIDTH + sx];
                     }
                 }
@@ -305,11 +306,11 @@ void interactive_window_zoom(uint8_t *original_image_data) {
     memcpy(current_view, original_image_data, IMG_WIDTH * IMG_HEIGHT);
 
     clear_screen();
-    printf("╔════════════════════════════════════════════╗\n");
-    printf("║      MODO JANELA - ESCOLHA O ALGORITMO     ║\n");
-    printf("╚════════════════════════════════════════════╝\n");
-    printf("  [1] Vizinho_Prox\n");
-    printf("  [2] Replicacao\n\nEscolha: ");
+    printf("\n");
+    printf("      MODO JANELA - ESCOLHA O ALGORITMO     \n");
+    printf("Caso nenhum algoritmo seja selecionado o programa pegara o primeiro.\n"); // Se tiver tempo corrigir isso aqui.
+    printf("  [1] Vizinho mais Proximo\n");
+    printf("  [2] Replicacao de Pixel\n\nEscolha: ");
     
     int algorithm = get_menu_choice();
     printf("%d\n", algorithm);
@@ -329,7 +330,7 @@ void interactive_window_zoom(uint8_t *original_image_data) {
     int btn_released = 1;
 
     clear_screen();
-    printf("=== MODO JANELA (%s) ===\n", (algorithm==1) ? "Vizinho_Prox" : "Replicacao");
+    printf("   === MODO JANELA (%s) ===   \n", (algorithm==1) ? "Vizinho_Prox" : "Replicacao");
     printf("1. Selecione Ponto 1.\n");
     printf("2. Selecione Ponto 2.\n");
     printf("3. Use +/- para Zoom.\n");
@@ -411,9 +412,9 @@ void interactive_window_zoom(uint8_t *original_image_data) {
 
 void print_main_menu() {
     clear_screen();
-    printf("╔════════════════════════════════════════════╗\n");
-    printf("║   SISTEMA DE ZOOM - COPROCESSADOR FPGA    ║\n");
-    printf("╚════════════════════════════════════════════╝\n\n");
+    printf("\n");
+    printf("   SISTEMA DE ZOOM - COPROCESSADOR FPGA    \n");
+    printf("\n\n");
     printf("  [1] Carregar Imagem\n");
     printf("  [2] Zoom Janela (Mouse/Software)\n");
     printf("  [3] Reset\n");
