@@ -52,7 +52,7 @@ Ao iniciar o programa, este menu será exibido. Digite o número da opção dese
 
 Após escolher a opção **[1]**, uma lista de arquivos BMP disponíveis na pasta será exibida.
 
-* Digite o número correspondente à imagem que deseja carregar (Ex: **1** para `Xadrez.bmp`).
+* Digite o número correspondente à imagem que deseja carregar (Ex: **2** para `Hornet.bmp`).
 * Pressione **ENTER**.
 * A imagem selecionada será carregada e enviada para o coprocessador FPGA.
 
@@ -70,15 +70,27 @@ Após carregar uma imagem, a opção **[2]** levará a este menu, que lista os a
 | :--- | :--- | :--- | :--- |
 | **[1]** | **Vizinho Mais Próximo** | 2x, 4x, 8x | Zoom In (Aumentar) |
 | **[2]** | **Replicação de Pixel** | 2x, 4x, 8x | Zoom In (Aumentar) |
-| **[3]** | **Decimação** | 0.5x, 0.25x, 0.125x | Zoom Out (Diminuir) |
-| **[4]** | **Média de Blocos** | 0.5x, 0.25x, 0.125x | Zoom Out (Diminuir) |
-| **[0]** | **Voltar** | Retorna ao Menu Principal. |
 
 * Selecione o número do algoritmo e pressione **ENTER**.
 * O sistema irá processar a imagem no FPGA e exibir o resultado no monitor VGA (se conectado).
 * Um passo de zoom é aplicado a cada execução (ex: se o fator é 1x, um zoom in resultará em 2x; se for 2x, resultará em 4x, e assim por diante).
 
+> [!NOTE]
+> Os algoritmos de _zoom-out_ não estão disponíveis para seleção, visto que a terceira etapa do problema exige que a imagem não pode ser menor do que seu tamanho original. Entretanto, após aplicar o _zoom-in_ na imagem, é possível dar _zoom-out_ posteriormente para fazê-la voltar ao seu tamanho original.
 
+
+
+<div align="center">
+  <img src="https://i.postimg.cc/LsX7QcLh/Selecao-Zoom.jpg"><br>
+  <strong>Menu de seleção de algoritimos de zoom.</strong><br><br>
+</div>
+
+Ao selecionar o algoritmo de zoom o usuário deve selecionar a área desejada para aplicar o zoom na janela.
+
+* A área deve ser selecionada fazendo uso do mouse conectado à placa FPGA. Os pontos 1 e 2 são selecionados com o clique esquerdo do mouse.
+* Coodernadas são visiveis no programa e um cursor é visivel na tela conectada ao VGA para facilitar a visualização da área que o usuário vai selecionar.
+* Ao selecionar a área desejada, o usuário pode realizar o _zoom-in_ com a tecla de "+" do teclado e o _zoom-out_ com a tecla de "-".
+* 
 
 <div align="center">
   <img src="https://i.postimg.cc/bvJMV7kJ/Selecao-Area.jpg"><br>
@@ -88,11 +100,6 @@ Após carregar uma imagem, a opção **[2]** levará a este menu, que lista os a
 <div align="center">
   <img src="https://i.postimg.cc/nLz5SyBr/Selecao-Area-Completa.jpg"><br>
   <strong>Menu de seleção de área após definir o espaço desejado para aplicar o zoom.</strong><br><br>
-</div>
-
-<div align="center">
-  <img src="https://i.postimg.cc/LsX7QcLh/Selecao-Zoom.jpg"><br>
-  <strong>Menu de seleção de algoritimos de zoom.</strong><br><br>
 </div>
 
 <div align="center">
