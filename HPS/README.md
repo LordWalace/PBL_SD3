@@ -8,7 +8,7 @@ Sumário
 =================
   * [1. Menu Principal](#1-menu-principal)
   * [2. Funções do código Assembly](#2-funções-do-código-assembly)
-  * [3. Implementação do zoom em área específica](#3-implementacao-do-zoom-em-area-especifica)
+  * [3. Implementação do zoom em área específica](#3-implementação-do-zoom-em-área-específica)
   * [4. Makefile](#3-makefile)
   * [5. Erros Comuns e Mensagens de Alerta](#4-erros-comuns-e-mensagens-de-alerta)
 
