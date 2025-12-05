@@ -107,6 +107,7 @@ Ao selecionar o algoritmo de zoom o usuário deve selecionar a área desejada pa
   <strong>Janela de status.</strong><br><br>
 </div>
 
+![Image](https://gifyu.com/image/bEsVt)
 ---
 
 ### 4. Funções do código Assembly
