@@ -28,7 +28,7 @@
 
 ## 1. Descrição e Objetivo do Projeto
 
-Esse _README_ é a versão atualizada para a terceira etapa do projeto de Zoom em imagens de escala cinza. O _README_ da segunda etapa desse projeto pode ser encontrado aqui: [README Segunda Etapa](https://github.com/LordWalace/PBL_SD2/blob/main/FPGA/README.md)  
+Esse _README_ é a versão atualizada para a terceira etapa do projeto de Zoom em imagens de escala cinza. A terceira etapa teve foco na atualização das funções já presentes na parte HPS do projeto, com a adição da funcionalidade de aplicar zoom-in sobre determinada área da janela fazendo uso do mouse e teclado. O _README_ da segunda etapa desse projeto pode ser encontrado aqui: [Segunda Etapa](https://github.com/LordWalace/PBL_SD2/blob/main/FPGA/README.md)  
 
 Este projeto integra um sistema completo de processamento de zoom de imagens em escala de cinza (8 bits/pixel) para o kit DE1-SoC. A lógica central reside na divisão funcional:
 - O **HPS (ARM)** cuida da interface com o usuário, da manipulação de arquivos BMP, comandos via menu interativo e comunicação com o hardware através de Assembly.
