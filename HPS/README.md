@@ -7,11 +7,10 @@
 Sumário
 =================
   * [1. Menu Principal](#1-menu-principal)
-  * [2. Menu de Seleção de Imagens](#2-menu-de-seleção-de-imagens)
-  * [3. Menu de Zoom](#3-menu-de-zoom)
-  * [4. Funções do código Assembly](#4-funções-do-código-assembly)
-  * [5. Makefile](#5-makefile)
-  * [6. Erros Comuns e Mensagens de Alerta](#6-erros-comuns-e-mensagens-de-alerta)
+  * [2. Funções do código Assembly](#2-funções-do-código-assembly)
+  * []()
+  * [3. Makefile](#3-makefile)
+  * [4. Erros Comuns e Mensagens de Alerta](#4-erros-comuns-e-mensagens-de-alerta)
 
 ## Descrição e Objetivo do Projeto
 
@@ -28,7 +27,8 @@ Esse documento está voltado em descrever como foi o desenvolvimento da parte As
 
 O sistema é operado através de um **menu de texto interativo**.
 
-### 1. Menu Principal
+### 1. Menus
+#### 1.1 Menu Principal
 
 Ao iniciar o programa, este menu será exibido. Digite o número da opção desejada e pressione **ENTER**.
 
@@ -48,7 +48,7 @@ Ao iniciar o programa, este menu será exibido. Digite o número da opção dese
   <strong>Menu principal</strong><br><br>
 </div>
 
-### 2. Menu de Seleção de Imagens
+#### 1.2. Menu de Seleção de Imagens
 
 Após escolher a opção **[1]**, uma lista de arquivos BMP disponíveis na pasta será exibida.
 
@@ -62,7 +62,7 @@ Após escolher a opção **[1]**, uma lista de arquivos BMP disponíveis na past
   <strong>Seleção de imagens</strong><br><br>
 </div>
 
-### 3. Menu de Zoom
+#### 1.3. Menu de Zoom
 
 Após carregar uma imagem, a opção **[2]** levará a este menu, que lista os algoritmos disponíveis:
 
@@ -110,13 +110,12 @@ Ao selecionar o algoritmo de zoom o usuário deve selecionar a área desejada pa
   <strong>Janela de status.</strong><br><br>
 </div>
 
-<div align="center">
-  <img src="https://gifyu.com/image/bEsVt"><br>
-  <strong>Janela de status.</strong><br><br>
-</div>
+#### Zoom em área especifica sendo aplicado.
+![Image](https://github.com/user-attachments/assets/fc3f2450-f38e-4489-a271-ad2dbbe65e94)
+
 ---
 
-### 4. Funções do código Assembly
+### 2. Funções do código Assembly
 
 Nessa seção as funções do código serão explicadas, cada uma tem um papel essencial para que o projeto demonstre resultados corretos.
 
@@ -163,12 +162,15 @@ Lê o valor de um pixel da VRAM.
 > Retorna o valor do pixel (sucesso), -1 (endereço inválido), ou -3 (erro de hardware/timeout).
 
 ---
+### 3. Implementação do zoom em área específica 
 
-### 5. MakeFile
+
+
+### 4. MakeFile
 
 Essa seção vai ser dedicada em explicar o funcionamento do MakeFile do projeto e suas características.
 
-#### 5.1. Função do MakeFile
+#### 3.1. Função do MakeFile
 
 O propósito principal deste *Makefile* é simplificar o processo de construção do projeto. Simplificando o processo de execução do projeto para um usúario ao fazer uso de um único comando (make <alvo>). Sendo assim, o *Makefile* fica responsável por:
 - Compilar o código em Assembly (lib.s) e C (main.c).
@@ -176,7 +178,7 @@ O propósito principal deste *Makefile* é simplificar o processo de construçã
 - Executar o programa resultante.
 - Limpar os ficheiros temporários e o executável.
 
-#### 5.2. Alvos do Makefile
+#### 3.2. Alvos do Makefile
 
 O *Makefile* do projeto define três alvos para um uso mais direto e explicado do programa.
 
@@ -206,7 +208,7 @@ O *Makefile* do projeto define três alvos para um uso mais direto e explicado d
 **Comando:** make clean
 
 
-### 6. Erros Comuns e Mensagens de Alerta
+### 5. Erros Comuns e Mensagens de Alerta
 
 O sistema foi desenhado para reportar problemas de forma clara:
 
