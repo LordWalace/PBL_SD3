@@ -78,6 +78,9 @@ Após carregar uma imagem, a opção **[2]** levará a este menu, que lista os a
 > [!NOTE]
 > Os algoritmos de _zoom-out_ não estão disponíveis para seleção, visto que a terceira etapa do problema exige que a imagem não pode ser menor do que seu tamanho original. Entretanto, após aplicar o _zoom-in_ na imagem, é possível dar _zoom-out_ posteriormente para fazê-la voltar ao seu tamanho original.
 
+> [!NOTE]
+> Caso o usuário tente acessar o menu de zoom antes de selecionar alguma imagem (mesmo que alguma imagem esteja aparecendo na tela) o programa não permite. Para conseguir fazer uso dos algoritmos de zoom é preciso sempre selecionar uma imagem no primeiro acesso do sistema ou após fazer uso do "Reset"
+
 
 
 <div align="center">
