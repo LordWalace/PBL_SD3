@@ -31,7 +31,7 @@
 Esse _README_ é a versão atualizada para a terceira etapa do projeto de Zoom em imagens de escala cinza. A terceira etapa teve foco na atualização das funções já presentes na parte HPS do projeto, com a adição da funcionalidade de aplicar zoom-in sobre determinada área da janela fazendo uso do mouse e teclado. O _README_ da segunda etapa desse projeto pode ser encontrado aqui: [Segunda Etapa](https://github.com/LordWalace/PBL_SD2/blob/main/FPGA/README.md)  
 
 Este projeto integra um sistema completo de processamento de zoom de imagens em escala de cinza (8 bits/pixel) para o kit DE1-SoC. A lógica central reside na divisão funcional:
-- O **HPS (ARM)** cuida da interface com o usuário, da manipulação de arquivos BMP, comandos via menu interativo e comunicação com o hardware através de Assembly.
+- O **HPS (ARM)** cuida da interface com o usuário, da manipulação de arquivos BMP por meio de mouse e teclado, comandos via menu interativo, comunicação com o hardware através de Assembly.
 - O **FPGA (Cyclone V)** implementa o coprocessador dedicado, recebendo comandos, processando algoritmos de zoom, e retornando dados e flags de estado.
 O objetivo é criar uma solução robusta, modular e expansível, documentada de forma que futuros usuários/engenheiros possam compreender, replicar, manter e aprimorar.
 
@@ -43,6 +43,7 @@ O objetivo é criar uma solução robusta, modular e expansível, documentada de
 - Manipulação e carragemento correto de imagens BMP.
 - Comunicação eficiente entre HPS e FPGA via barramentos PIO (Parallel Input/Output), com controle de delays e sinalização de status.
 - Interface de usuário clara e direta.
+#### Requisitos da terceira etapa
 - Uso do mouse para seleção de uma região da janela para a aplicação de _zoom-in_.
 - Coordenadas presentes no sistema para auxiliar o usuário na escolha da área desejada para aplicar zoom.
 - Fazer uso das teclas "+" e "-" do teclado para aplicar _zoom-in_ e _zoom-out_ respectivamente
@@ -97,6 +98,8 @@ Mais detalhes sobre os requisitos e solução específica em cada componente est
 ### HPS (ARM)
 - Interface de navegação via menus.
 - Gerenciamento de arquivos BMP.
+- Manipulação de arquivos BMP fazendo uso do teclado.
+- Lógica do cursor para seleção de área para aplicação de algoritmos de zoom.
 - API Assembly para controle direto do hardware e sincronização.
 
 Mais detalhes: [README HPS](https://github.com/LordWalace/PBL_SD3/blob/main/HPS/README.md)
@@ -117,7 +120,8 @@ Mais detalhes: [README FPGA](https://github.com/LordWalace/PBL_SD3/blob/main/FPG
 2. Realizar upload do bitstream do FPGA (projeto pronto e validado).
 3. Instalar, compilar e executar o software HPS conforme instruções individuais.
 4. Verificar conexão física HPS ↔ FPGA.
-5. Testar operações iniciais (carregar imagem, zoom, reset, status).
+5. Conectar um mouse diretamente no FPGA.
+6. Testar operações iniciais (carregar imagem, zoom, reset, status).
 
 Para instruções detalhadas de instalação/configuração, acesse:
 - [README HPS](https://github.com/LordWalace/PBL_SD2/blob/main/HPS/README.md)
