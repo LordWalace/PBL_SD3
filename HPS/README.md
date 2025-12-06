@@ -86,7 +86,7 @@ Após carregar uma imagem, a opção **[2]** do menu principal levará a este me
 
 Ao selecionar o algoritmo de zoom o usuário deve selecionar a área desejada para aplicar o zoom na janela.
 
-* A área deve ser selecionada fazendo uso do mouse conectado à placa FPGA. Os pontos 1 e 2 são selecionados com o clique esquerdo do mouse.
+* A área deve ser selecionada fazendo uso do mouse conectado ao HPS. Os pontos 1 e 2 são selecionados com o clique esquerdo do mouse.
 * Coodernadas são visiveis no programa e um cursor é visivel na tela conectada ao VGA para facilitar a visualização da área que o usuário vai selecionar.
 * Ao selecionar a área desejada, o usuário pode realizar o _zoom-in_ com a tecla de "+" do teclado e o _zoom-out_ com a tecla de "-".
 * 
