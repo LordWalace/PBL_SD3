@@ -120,7 +120,7 @@ Mais detalhes: [README FPGA](https://github.com/LordWalace/PBL_SD3/blob/main/FPG
 2. Realizar upload do bitstream do FPGA (projeto pronto e validado).
 3. Instalar, compilar e executar o software HPS conforme instruções individuais.
 4. Verificar conexão física HPS ↔ FPGA.
-5. Conectar um mouse diretamente no FPGA.
+5. Conectar um mouse diretamente no HPS.
 6. Testar operações iniciais (carregar imagem, zoom, reset, status).
 
 Para instruções detalhadas de instalação/configuração, acesse:
