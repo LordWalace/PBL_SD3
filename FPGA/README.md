@@ -43,6 +43,13 @@ Nessa etapa os arquivos "*main.v*", "*mem1.v*" e "*memory_control.v*" assim como
 
 ---
 
+<div align="center">
+  <img src="https://postimg.cc/56C1RgPS"><br>
+  <strong>Componentes necessários para a utilização do projeto.</strong><br><br>
+</div>
+
+---
+
 ## 3. Arquitetura do Sistema
 
 A arquitetura se baseia em uma divisão clara entre software e hardware para isolar o processamento de pixels das operações de deslocamento/zoom. A comunicação entre o HPS e o Coprocessador é realizada através de Barramentos PIO (Parallel Input/Output). Nessa seção haverá um foco nos arquivos "top_level" e "main" do Verilog, já que, eles foram modificados e criados para auxiliar no desenvolvimento da etapa 2 do projeto **Zoom Digital**
