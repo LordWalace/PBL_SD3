@@ -158,8 +158,8 @@ Para instruções detalhadas de instalação/configuração, acesse:
 
 ## 8. Referências Cruzadas: Documentação Específica
 
-- **Documentação HPS (interface, menus, API Assembly):** [README HPS](https://github.com/LordWalace/PBL_SD2/blob/main/HPS/README.md)
-- **Documentação FPGA (coprocessador, ISA, blocos internos):** [README FPGA](https://github.com/LordWalace/PBL_SD2/blob/main/FPGA/README.md)
+- **Documentação HPS (interface, menus, API Assembly):** [README HPS](https://github.com/LordWalace/PBL_SD3/blob/main/HPS/README.md)
+- **Documentação FPGA (coprocessador, ISA, blocos internos):** [README FPGA](https://github.com/LordWalace/PBL_SD3/blob/main/FPGA/README.md)
 - **Este README** serve como visão geral e guia para integração entre os dois sistemas.
 
 ---
