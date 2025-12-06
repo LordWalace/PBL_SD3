@@ -202,11 +202,6 @@ Processo de desenho:
 > [!NOTE]
 > Se o cursor fosse movido durante a execução do zoom pelo FPGA (Etapa 3), a utilização do current_view garantiria que, mesmo que o FPGA estivesse lendo ou escrevendo em grandes blocos, o cursor seria gerenciado localmente pelo CPU.
 
-
-#### 3.3 
-
-
-
 ---
 
 ### 4. MakeFile
