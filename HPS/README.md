@@ -82,7 +82,6 @@ Após carregar uma imagem, a opção **[2]** levará a este menu, que lista os a
 > Caso o usuário tente acessar o menu de zoom antes de selecionar alguma imagem (mesmo que alguma imagem esteja aparecendo na tela) o programa não permite. Para conseguir fazer uso dos algoritmos de zoom é preciso sempre selecionar uma imagem no primeiro acesso do sistema ou após fazer uso do "Reset"
 
 
-
 <div align="center">
   <img src="https://i.postimg.cc/LsX7QcLh/Selecao-Zoom.jpg"><br>
   <strong>Menu de seleção de algoritimos de zoom.</strong><br><br>
@@ -109,9 +108,6 @@ Ao selecionar o algoritmo de zoom o usuário deve selecionar a área desejada pa
   <img src="https://i.postimg.cc/hGjwZkTG/Status.jpg"><br>
   <strong>Janela de status.</strong><br><br>
 </div>
-
-#### Zoom em área especifica sendo aplicado.
-![Image](https://github.com/user-attachments/assets/fc3f2450-f38e-4489-a271-ad2dbbe65e94)
 
 ---
 
@@ -158,19 +154,66 @@ Lê o valor de um pixel da VRAM.
 - Dispara a operação via PIO_ENABLE.
 - Entra em um loop de espera (WAIT_LOOP_RD) pelo flag FLAG_DONE_MASK.
 - Se for concluída sem erro, lê o valor do pixel do registrador de saída (PIO_DATA_OUT) e o retorna em r0.
+  
 > [!NOTE]
 > Retorna o valor do pixel (sucesso), -1 (endereço inválido), ou -3 (erro de hardware/timeout).
 
 ---
+
 ### 3. Implementação do zoom em área específica 
 
+Essa seção vai se aprofundar sobre como os requisitos da etapa 3 do projeto foram elaborados e aplicados no programa.
 
+#### Zoom em área específica sendo aplicado.
+![Image](https://github.com/user-attachments/assets/fc3f2450-f38e-4489-a271-ad2dbbe65e94)
+
+#### 3.1. Double Buffering no Hardware (FPGA)
+O uso de dois buffers na VGA se apresentou essencial para que houvesse uma transição suave da imagem original para a imagem com zoom na janela. O **write_pixel** simula o recorte da porção ampliada sobre a imagem original, utilizando o Buffer B como a fonte do zoom após o software ler a área selecionada. Enquanto a variável **current_view** armazena o estado atual da tela (imagem original + pixels de zoom). 
+
+Após realizar o _zoom-in_ necessário para expandir a área o usuário pode optar por voltar ao tamanho original onde Buffer B (área de zoom) e a copia/mescla de volta no Buffer A (exibição).
+
+Além disso o uso de dois buffers na VGA possibilita as seguintes propriedades no programa:
+* Ele resolve o problema de restaurar o fundo do cursor (Modo 0), pois ele contém os pixels corretos, independentemente de serem da imagem original ou da região ampliada.
+* Ele garante que o recorte da porção ampliada seja aplicado sobre o estado atual da tela, mantendo a integridade da imagem enquanto o mouse é movido e o zoom é ajustado.
+* Essa arquitetura distribui a carga: a FPGA faz o trabalho pesado de processamento de imagem em massa (zoom em toda a tela), e a CPU faz o trabalho de gerenciamento de interface e recorte seletivo (cursor e janela de zoom).
+
+#### 3.2. Fluxo de Zoom na Janela com o Coprocessador (FPGA)
+
+| Etapa | Ação | Responsável | Detalhes |
+| :--- | :--- | :--- | :--- |
+| *1. Carregamento Inicial* | A imagem original é carregada para a memória de vídeo da VGA (Buffer A) e exibida. | CPU (via send_to_fpga) e Coprocessador | O original_image_data no software espelha o Buffer A. |
+| *2. Seleção de Janela* | O usuário define a área de interesse (P1 e P2). | CPU/Software | Define as coordenadas da *região de origem* na imagem original. |
+| *3. Processamento (Zoom)* | A imagem inteira no Buffer A é ampliada pelo fator $Z$ e o resultado é escrito no *Buffer B* da VGA. | *Coprocessador/FPGA* | O Coprocessador aplica o algoritmo de zoom (Vizinho Próximo, Replicação) em toda a imagem *de uma só vez*. |
+| *4. Recorte e Exibição* | A aplicação CPU calcula as coordenadas da *região ampliada de interesse* no Buffer B e as copia de volta para a área da janela no *Buffer A*. | CPU/Software  draw_zoomed_region) | O Buffer A agora contém a imagem original (fundo) com a região da janela sobreposta pela versão ampliada. |
+| *5. Atualização da Tela* | O Buffer A é exibido. | Coprocessador/FPGA | O usuário vê o zoom na janela sem que o restante da tela tenha sido processado pelo CPU. |
+
+
+#### 3.3. Cursor do Software
+
+O conceito de Cursor de Software é mantido, e ele depende fundamentalmente do Buffer de Visualização Atual do Software (current_view) para a restauração de pixels, interagindo diretamente com o Buffer A da VGA (que está sendo exibido).
+
+* Necessidade do Buffer de Software (current_view): Como o Coprocessador está ocupado realizando o zoom, e a VGA está exibindo o Buffer A, a CPU precisa de uma cópia dos pixels sendo exibidos para gerenciar o cursor.
+
+Processo de desenho:
+* Apagar: Antes de mover o cursor, a área antiga deve ser restaurada usando os dados do current_view e a função write_pixel (Modo 0).
+* Desenhar: O novo cursor é desenhado com CURSOR_COLOR usando write_pixel (Modo 1).
+* O "send_refresh()" garante que as pequenas alterações de pixel (o cursor) feitas pelo write_pixel sejam rapidamente refletidas no display.
+
+> [!NOTE]
+> Se o cursor fosse movido durante a execução do zoom pelo FPGA (Etapa 3), a utilização do current_view garantiria que, mesmo que o FPGA estivesse lendo ou escrevendo em grandes blocos, o cursor seria gerenciado localmente pelo CPU.
+
+
+#### 3.3 
+
+
+
+---
 
 ### 4. MakeFile
 
 Essa seção vai ser dedicada em explicar o funcionamento do MakeFile do projeto e suas características.
 
-#### 3.1. Função do MakeFile
+#### 4.1. Função do MakeFile
 
 O propósito principal deste *Makefile* é simplificar o processo de construção do projeto. Simplificando o processo de execução do projeto para um usúario ao fazer uso de um único comando (make <alvo>). Sendo assim, o *Makefile* fica responsável por:
 - Compilar o código em Assembly (lib.s) e C (main.c).
@@ -178,7 +221,7 @@ O propósito principal deste *Makefile* é simplificar o processo de construçã
 - Executar o programa resultante.
 - Limpar os ficheiros temporários e o executável.
 
-#### 3.2. Alvos do Makefile
+#### 4.2. Alvos do Makefile
 
 O *Makefile* do projeto define três alvos para um uso mais direto e explicado do programa.
 
