@@ -57,7 +57,7 @@ Após escolher a opção **[1]**, uma lista de arquivos BMP disponíveis na past
 
 
 <div align="center">
-  <img src="https://i.postimg.cc/bvJMV7kS/Selecao-Imagem.jpg"><br>
+  <img src="https://i.postimg.cc/26JsPhZM/Imagem-Select2.png"><br>
   <strong>Seleção de imagens</strong><br><br>
 </div>
 
@@ -80,7 +80,7 @@ Após carregar uma imagem, a opção **[2]** do menu principal levará a este me
 
 
 <div align="center">
-  <img src="https://i.postimg.cc/LsX7QcLh/Selecao-Zoom.jpg"><br>
+  <img src="https://i.postimg.cc/Ss5BwCMP/Zoom-Select2.png"><br>
   <strong>Menu de seleção de algoritimos de zoom.</strong><br><br>
 </div>
 
@@ -92,17 +92,17 @@ Ao selecionar o algoritmo de zoom o usuário deve selecionar a área desejada pa
 * 
 
 <div align="center">
-  <img src="https://i.postimg.cc/bvJMV7kJ/Selecao-Area.jpg"><br>
+  <img src="https://i.postimg.cc/vBjJpfnR/Zoom-Select22.png"><br>
   <strong>Menu de seleção de área da imagem.</strong><br><br>
 </div>
 
 <div align="center">
-  <img src="https://i.postimg.cc/nLz5SyBr/Selecao-Area-Completa.jpg"><br>
+  <img src="https://i.postimg.cc/PxcgBYwg/Area-Select2.png"><br>
   <strong>Menu de seleção de área após definir o espaço desejado para aplicar o zoom.</strong><br><br>
 </div>
 
 <div align="center">
-  <img src="https://i.postimg.cc/hGjwZkTG/Status.jpg"><br>
+  <img src="https://i.postimg.cc/4dMDrVcR/Status2.png"><br>
   <strong>Janela de status.</strong><br><br>
 </div>
 
