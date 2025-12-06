@@ -187,7 +187,7 @@ O projeto foi implementado com as seguintes funcionalidades:
 - Execução e ligação dos arquivos a partir de um "Makefile"
 - Tratamento de erro para imagens incompatíveis
 
-É possível saber mais dos testes realizados e dos resultados a partir do [README HPS](https://github.com/LordWalace/PBL_SD2/blob/main/HPS/README.md).
+É possível saber mais dos testes realizados e dos resultados a partir do [README HPS](https://github.com/LordWalace/PBL_SD3/blob/main/HPS/README.md).
 ###
 
 
