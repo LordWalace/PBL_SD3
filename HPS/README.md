@@ -30,10 +30,10 @@ O sistema é operado através de um **menu de texto interativo**.
 ### 1. Menus
 #### 1.1 Menu Principal
 
-Ao iniciar o programa, este menu será exibido. Digite o número da opção desejada e pressione **ENTER**.
+Ao iniciar o programa, este menu será exibido. Digite o número da opção desejada e ela sera acessada automaticamente.
 
 > [!WARNING]
-> A **primeira** inicialização do programa apresenta uma imagem, entretanto, essa imagem não consegue ser alterada fazendo uso dos algoritmos de zoom.
+> A **primeira** inicialização do programa apresenta uma imagem, entretanto, essa imagem não consegue ser alterada fazendo uso dos algoritmos de zoom. Caso o usuário tente acessar o menu de zoom antes de selecionar alguma imagem (mesmo que alguma imagem esteja aparecendo na tela) o programa não permite. Para conseguir fazer uso dos algoritmos de zoom é preciso sempre selecionaruma imagem. Isso sempre será necessário quando for o **primeiro acesso ao sistema depois de fechar ele** ou após fazer uso da opção **_Reset_** do menu principal.
 
 | Opção | Ação | Observação |
 | :--- | :--- | :--- |
@@ -44,7 +44,7 @@ Ao iniciar o programa, este menu será exibido. Digite o número da opção dese
 | **[0] Sair** | Encerra o programa. | |
 
 <div align="center">
-  <img src="https://i.postimg.cc/wBKD3kQg/Menu.png](https://i.postimg.cc/VN6TZxnC/Menu.jpg"><br>
+  <img src="https://i.postimg.cc/cLnSZDm5/Menu1.png"><br>
   <strong>Menu principal</strong><br><br>
 </div>
 
@@ -53,7 +53,6 @@ Ao iniciar o programa, este menu será exibido. Digite o número da opção dese
 Após escolher a opção **[1]**, uma lista de arquivos BMP disponíveis na pasta será exibida.
 
 * Digite o número correspondente à imagem que deseja carregar (Ex: **2** para `Hornet.bmp`).
-* Pressione **ENTER**.
 * A imagem selecionada será carregada e enviada para o coprocessador FPGA.
 
 
@@ -64,7 +63,7 @@ Após escolher a opção **[1]**, uma lista de arquivos BMP disponíveis na past
 
 #### 1.3. Menu de Zoom
 
-Após carregar uma imagem, a opção **[2]** levará a este menu, que lista os algoritmos disponíveis:
+Após carregar uma imagem, a opção **[2]** do menu principal levará a este menu, que lista os algoritmos disponíveis:
 
 | Opção | Algoritmo | Fator de Escala (Exemplos) | Efeito |
 | :--- | :--- | :--- | :--- |
@@ -78,8 +77,6 @@ Após carregar uma imagem, a opção **[2]** levará a este menu, que lista os a
 > [!NOTE]
 > Os algoritmos de _zoom-out_ não estão disponíveis para seleção, visto que a terceira etapa do problema exige que a imagem não pode ser menor do que seu tamanho original. Entretanto, após aplicar o _zoom-in_ na imagem, é possível dar _zoom-out_ posteriormente para fazê-la voltar ao seu tamanho original.
 
-> [!NOTE]
-> Caso o usuário tente acessar o menu de zoom antes de selecionar alguma imagem (mesmo que alguma imagem esteja aparecendo na tela) o programa não permite. Para conseguir fazer uso dos algoritmos de zoom é preciso sempre selecionar uma imagem no primeiro acesso do sistema ou após fazer uso do "Reset"
 
 
 <div align="center">
