@@ -44,7 +44,7 @@ Nessa etapa os arquivos "*main.v*", "*mem1.v*" e "*memory_control.v*" assim como
 ---
 
 <div align="center">
-  <img src="https://postimg.cc/56C1RgPS"><br>
+  <img src="https://i.postimg.cc/9FxMzNZK/Captura-de-imagem-20251205-222707.png"><br>
   <strong>Componentes necessários para a utilização do projeto.</strong><br><br>
 </div>
 
